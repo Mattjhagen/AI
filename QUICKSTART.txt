@@ -1,0 +1,142 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║  🚀 VAST.AI TRAINING - QUICK START CHECKLIST                ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+STEP 1: PACKAGE FILES (5 minutes)
+─────────────────────────────────────────────────────────────
+cd ~/AI/deploy
+bash train_on_cloud.sh
+
+→ Creates: shaggoth-training-YYYYMMDD-HHMMSS.tar.gz
+
+
+STEP 2: VAST.AI ACCOUNT (5 minutes)
+─────────────────────────────────────────────────────────────
+1. Go to: https://vast.ai
+2. Sign up + verify email
+3. Add $10 credit (Account → Billing)
+
+
+STEP 3: RENT GPU (2 minutes)
+─────────────────────────────────────────────────────────────
+1. Go to: https://vast.ai/console/create/
+2. Search for: A100 80GB
+3. Sort by: Price ($/hr)
+4. Look for: $1.00-$2.00/hr
+5. Image: pytorch/pytorch:2.0.1-cuda11.8-cudnn8-devel
+6. Click "Rent"
+
+
+STEP 4: UPLOAD FILES (5 minutes)
+─────────────────────────────────────────────────────────────
+# Copy SSH command from Vast.ai (looks like):
+ssh -p 12345 root@ssh6.vast.ai
+
+# Upload package (replace PORT):
+cd ~/AI
+scp -P 12345 shaggoth-training-*.tar.gz root@ssh6.vast.ai:/workspace/
+
+
+STEP 5: SETUP ON GPU (10 minutes)
+─────────────────────────────────────────────────────────────
+ssh -p 12345 root@ssh6.vast.ai
+
+cd /workspace
+tar -xzf shaggoth-training-*.tar.gz
+cd shaggoth-training
+pip install -r requirements.txt
+
+
+STEP 6: DOWNLOAD MODEL (30-60 minutes) ☕
+─────────────────────────────────────────────────────────────
+pip install -U huggingface_hub
+huggingface-cli download deepseek-ai/DeepSeek-R1 --local-dir DeepSeek-R1
+
+⚠️  This is 300GB+ and takes time! Grab coffee.
+
+
+STEP 7: START TRAINING INTERFACE (1 minute)
+─────────────────────────────────────────────────────────────
+python3 app.py
+
+→ Shows: Running on http://0.0.0.0:7860
+
+
+STEP 8: CONNECT WITH SSH TUNNEL (1 minute)
+─────────────────────────────────────────────────────────────
+# On R510, new terminal (replace PORT):
+ssh -p 12345 -L 7860:localhost:7860 root@ssh6.vast.ai
+
+# Open browser:
+http://localhost:7860
+
+
+STEP 9: TRAIN MODEL (3-4 hours) 🎮
+─────────────────────────────────────────────────────────────
+In Gradio interface:
+
+1. Model Setup Tab:
+   ✓ Load Model (8-bit)
+   ✓ Setup LoRA (rank=8, alpha=16)
+
+2. Dataset Tab:
+   ✓ Upload datasets/shaggoth_mixed.jsonl
+   ✓ Load Dataset (405 examples)
+
+3. Training Tab:
+   ✓ Epochs: 3
+   ✓ Batch Size: 4
+   ✓ Learning Rate: 2e-4
+   ✓ Click "Start Training"
+
+Wait 3-4 hours. Monitor logs.
+
+
+STEP 10: DOWNLOAD CHECKPOINT (5 minutes)
+─────────────────────────────────────────────────────────────
+# On R510 (replace PORT):
+cd ~/AI
+scp -P 12345 -r root@ssh6.vast.ai:/workspace/shaggoth-training/shaggoth-trained ./
+
+# Verify:
+ls -lh shaggoth-trained/
+
+
+STEP 11: STOP INSTANCE ⚠️ IMPORTANT! (1 minute)
+─────────────────────────────────────────────────────────────
+1. Go to: https://vast.ai/console/instances/
+2. Click "Destroy" on your instance
+3. Confirm
+
+💰 Don't forget or it keeps charging!
+
+
+STEP 12: DEPLOY TO PRODUCTION (10 minutes)
+─────────────────────────────────────────────────────────────
+cd ~/AI/deploy
+bash deploy_to_ec2.sh ~/AI/shaggoth-trained
+
+→ Uploads to S3 + deploys to EC2 + restarts service
+
+
+╔══════════════════════════════════════════════════════════════╗
+║  TOTAL TIME: ~5 hours (mostly waiting)                       ║
+║  TOTAL COST: $6-8                                            ║
+║  RESULT: Trained AI model on your EC2                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+COMMANDS AT A GLANCE:
+─────────────────────────────────────────────────────────────
+Package:  cd ~/AI/deploy && bash train_on_cloud.sh
+Upload:   scp -P PORT file.tar.gz root@ssh6.vast.ai:/workspace/
+Connect:  ssh -p PORT root@ssh6.vast.ai
+Tunnel:   ssh -p PORT -L 7860:localhost:7860 root@ssh6.vast.ai
+Download: scp -P PORT -r root@ssh6.vast.ai:/workspace/path ./
+Deploy:   cd ~/AI/deploy && bash deploy_to_ec2.sh checkpoint/
+
+HELP:
+─────────────────────────────────────────────────────────────
+Full guide: ~/AI/VASTAI_SETUP.md
+Questions: See HARDWARE_REQUIREMENTS.md
